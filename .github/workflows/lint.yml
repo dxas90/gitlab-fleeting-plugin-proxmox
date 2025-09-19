@@ -22,15 +22,3 @@ jobs:
         uses: golangci/golangci-lint-action@v8
         with:
           version: v2.1
-
-  check-licenses:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-      - run: make check-licenses

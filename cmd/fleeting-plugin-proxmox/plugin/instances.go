@@ -21,7 +21,6 @@ var ErrCloneVMWithoutConfiguredStorage = errors.New("attempted to clone a VM wit
 
 func (ig *InstanceGroup) deployInstance(ctx context.Context, template *proxmox.VirtualMachine, cloneMu *sync.Mutex) (int, error) {
 	VMID, task, err := ig.cloneTemplate(ctx, template, cloneMu)
-
 	if err == nil {
 		ig.log.Info("Deploying new instance", "vmid", VMID)
 
@@ -50,25 +49,25 @@ func (ig *InstanceGroup) deployInstance(ctx context.Context, template *proxmox.V
 		}
 
 		// Wait for agent to start
-		if err := vm.WaitForAgent(ctx, int(proxmoxAgentStartTimeout/time.Second)); err != nil {
+		err = vm.WaitForAgent(ctx, int(proxmoxAgentStartTimeout/time.Second))
+		if err != nil {
 			return fmt.Errorf("failed when waiting for qemu agent to start on newly deployed instance: %w", err)
 		}
 
 		return nil
 	}()
 
-	newInstanceName := ig.Settings.InstanceNameRunning
+	newInstanceName := ig.InstanceNameRunning
 
 	if err != nil {
 		ig.log.Error("instance deployment failed, marking for removal", "vmid", VMID, "err", err)
-		newInstanceName = ig.Settings.InstanceNameRemoving
+		newInstanceName = ig.InstanceNameRemoving
 	}
 
 	_, renameErr := vm.Config(ctx, proxmox.VirtualMachineOption{
 		Name:  "name",
 		Value: newInstanceName,
 	})
-
 	if renameErr != nil {
 		ig.log.Error("failed to rename instance", "vmid", VMID, "err", renameErr)
 	}
@@ -99,17 +98,17 @@ func (ig *InstanceGroup) cloneTemplate(ctx context.Context, template *proxmox.Vi
 
 func (ig *InstanceGroup) getTemplateCloneOptions(template *proxmox.VirtualMachine) (*proxmox.VirtualMachineCloneOptions, error) {
 	cloneOptions := &proxmox.VirtualMachineCloneOptions{
-		Name:    ig.Settings.InstanceNameCreating,
-		Pool:    ig.Settings.Pool,
-		Storage: ig.Settings.Storage,
+		Name:    ig.InstanceNameCreating,
+		Pool:    ig.Pool,
+		Storage: ig.Storage,
 		Full:    1,
 	}
 
-	if !template.Template && ig.Settings.Storage == "" {
+	if !template.Template && ig.Storage == "" {
 		return nil, ErrCloneVMWithoutConfiguredStorage
 	}
 
-	if template.Template && ig.Settings.Storage == "" {
+	if template.Template && ig.Storage == "" {
 		cloneOptions.Full = 0
 	}
 
@@ -125,13 +124,11 @@ func (ig *InstanceGroup) markStaleInstancesForRemoval(ctx context.Context) error
 	instancesToMarkForRemoval := make([]*proxmox.ClusterResource, 0, len(pool.Members))
 
 	for _, member := range pool.Members {
-		member := member
-
 		if !ig.isProxmoxResourceAnInstance(member) {
 			continue
 		}
 
-		if member.Name != ig.Settings.InstanceNameCreating {
+		if member.Name != ig.InstanceNameCreating {
 			continue
 		}
 
@@ -143,7 +140,8 @@ func (ig *InstanceGroup) markStaleInstancesForRemoval(ctx context.Context) error
 		return nil
 	}
 
-	if err := ig.markInstancesForRemoval(ctx, instancesToMarkForRemoval...); err != nil {
+	err = ig.markInstancesForRemoval(ctx, instancesToMarkForRemoval...)
+	if err != nil {
 		return fmt.Errorf("failed to mark stale instances for removal: %w", err)
 	}
 
@@ -154,8 +152,6 @@ func (ig *InstanceGroup) markInstancesForRemoval(ctx context.Context, instances 
 	var errorGroup errgroup.Group
 
 	for _, instance := range instances {
-		instance := instance
-
 		errorGroup.Go(func() error {
 			log := ig.log.With("name", instance.Name, "vmid", instance.VMID, "node", instance.Node)
 
@@ -167,9 +163,8 @@ func (ig *InstanceGroup) markInstancesForRemoval(ctx context.Context, instances 
 
 			task, err := vm.Config(ctx, proxmox.VirtualMachineOption{
 				Name:  "name",
-				Value: ig.Settings.InstanceNameRemoving,
+				Value: ig.InstanceNameRemoving,
 			})
-
 			if err == nil {
 				err = task.Wait(ctx, proxmoxTaskWaitInterval, proxmoxTaskWaitTimeout)
 			}
@@ -183,7 +178,8 @@ func (ig *InstanceGroup) markInstancesForRemoval(ctx context.Context, instances 
 		})
 	}
 
-	if err := errorGroup.Wait(); err != nil {
+	err := errorGroup.Wait()
+	if err != nil {
 		ig.instanceCollectionTrigger <- struct{}{}
 		return fmt.Errorf("failed to mark one or more instances for removal: %w", err)
 	}
@@ -194,5 +190,5 @@ func (ig *InstanceGroup) markInstancesForRemoval(ctx context.Context, instances 
 }
 
 func (ig *InstanceGroup) isProxmoxResourceAnInstance(member proxmox.ClusterResource) bool {
-	return member.Type == "qemu" && member.VMID != uint64(*ig.Settings.TemplateID)
+	return member.Type == "qemu" && member.VMID != uint64(*ig.TemplateID)
 }

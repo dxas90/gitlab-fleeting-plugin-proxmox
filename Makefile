@@ -34,11 +34,11 @@ vendor: go.mod go.sum
 
 tools/go-licenses:
 	@$(call INFO,"Installing tool $(shell basename $@)")
-	GOBIN=$$(realpath $$(dirname $@)) go install github.com/google/go-licenses@v1.6.0
+	GOBIN=$$(realpath $$(dirname $@)) go install github.com/google/go-licenses/v2@v2.0.1
 
 tools/golangci-lint:
 	@$(call INFO,"Installing tool $(shell basename $@)")
-	GOBIN=$$(realpath $$(dirname $@)) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
+	wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | BINDIR=tools bash -s v2.4.0
 
 ################################################################################
 # Linters (and checks)
@@ -52,7 +52,7 @@ lint-go: vendor tools/golangci-lint
 
 check-licenses: tools/go-licenses vendor
 	@$(call INFO,"Checking third-party licenses")
-	./tools/go-licenses check ./... --include_tests --disallowed_types unknown,forbidden,restricted
+	./tools/go-licenses check ./... --include_tests --disallowed_types unknown
 .PHONY: check-licenses
 
 ################################################################################

@@ -42,7 +42,9 @@ func TestIntegration(t *testing.T) {
 	defer configFile.Close()
 
 	configs := new([]IntegrationTestConfig)
-	if err := json.NewDecoder(configFile).Decode(&configs); err != nil {
+
+	err = json.NewDecoder(configFile).Decode(&configs)
+	if err != nil {
 		t.Errorf("failed to read config file: %v", err)
 	}
 

@@ -1,9 +1,13 @@
+version: "2"
 run:
   timeout: "10m"
 linters:
-  enable-all: true
+  default: all
+  enable:
+    - wsl_v5
   disable:
   - depguard
+  - embeddedstructfieldcheck
   - exhaustruct
   - funlen
   - godox
@@ -11,29 +15,63 @@ linters:
   - nlreturn
   - paralleltest
   - testpackage
-  # Deprecated
-  - deadcode
-  - exhaustivestruct
-  - golint
-  - ifshort
-  - interfacer
-  - maligned
-  - nosnakecase
-  - scopelint
-  - structcheck
-  - varcheck
-linters-settings:
-  varnamelen:
-    ignore-names:
-      - vm
-      - wg
-      - ig
-  lll:
-    tab-width: 2
-    line-length: 200
-  tagliatelle:
-    case: 
-      rules:
-        json: snake
-  cyclop:
-    max-complexity: 15
+  - wsl
+  exclusions:
+    generated: lax
+    warn-unused: true
+    presets:
+      - comments
+      - std-error-handling
+      - common-false-positives
+      - legacy
+    # Excluding configuration per-path, per-linter, per-text and per-source.
+    rules:
+      # Exclude some linters from running on tests files.
+      - path: _test\.go
+        linters:
+          - gocyclo
+          - errcheck
+          - dupl
+      # Exclude known linters from partially hard-vendored code,
+      # which is impossible to exclude via `nolint` comments.
+      # `/` will be replaced by the current OS file path separator to properly work on Windows.
+      - path: internal/hmac/
+        text: "weak cryptographic primitive"
+        linters:
+          - gosec
+      # Exclude some `staticcheck` messages.
+      - linters:
+          - staticcheck
+        text: "SA9003:"
+      # Exclude `lll` issues for long lines with `go:generate`.
+      - linters:
+          - lll
+        source: "^//go:generate "
+    # Which file paths to exclude: they will be analyzed, but issues from them won't be reported.
+    # "/" will be replaced by the current OS file path separator to properly work on Windows.
+    # Default: []
+    paths:
+      - ".*\\.my\\.go$"
+      - lib/bad.go
+  settings:
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
+    varnamelen:
+      ignore-names:
+        - vm
+        - wg
+        - ig
+    gosec:
+      excludes:
+        - G115
+    lll:
+      tab-width: 2
+      line-length: 200
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+    cyclop:
+      max-complexity: 15

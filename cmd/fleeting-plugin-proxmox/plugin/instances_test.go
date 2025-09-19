@@ -60,6 +60,7 @@ func TestInstanceGroup_templateCloneOptions(t *testing.T) {
 
 			result, err := ig.getTemplateCloneOptions(&template)
 			require.ErrorIs(t, err, testCase.expectedErr)
+
 			if err == nil {
 				require.Equal(t, testCase.configuredStorage, result.Storage)
 				require.Equal(t, testCase.expectedFull, result.Full)

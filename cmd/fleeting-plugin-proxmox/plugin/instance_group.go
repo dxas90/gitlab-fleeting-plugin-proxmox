@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -14,7 +15,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var _ provider.InstanceGroup = (*InstanceGroup)(nil)
+var (
+	_                               provider.InstanceGroup = (*InstanceGroup)(nil)
+	ErrTimeoutGettingConnectionInfo                        = errors.New("timed out getting connection info")
+	ErrInstanceNotRunning                                  = errors.New("instance is not running")
+)
 
 const (
 	triggerChannelCapacity = 100
@@ -64,7 +69,7 @@ func (ig *InstanceGroup) Heartbeat(ctx context.Context, instance string) error {
 	}
 
 	if vm.Uptime == 0 {
-		return fmt.Errorf("instance vmid='%d' is not running", VMID)
+		return fmt.Errorf("%w", ErrInstanceNotRunning)
 	}
 
 	return nil
@@ -80,13 +85,14 @@ func (ig *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings
 	ig.collectorShutdownTrigger = make(chan struct{}, 1)
 	ig.sessionTicketRefresherShutdownTrigger = make(chan struct{}, 1)
 
-	if err := ig.Settings.CheckRequiredFields(); err != nil {
+	err = ig.CheckRequiredFields()
+	if err != nil {
 		return provider.ProviderInfo{}, err
 	}
 
-	ig.Settings.FillWithDefaults()
+	ig.FillWithDefaults()
 
-	if ig.Settings.InsecureSkipTLSVerify {
+	if ig.InsecureSkipTLSVerify {
 		ig.log.Warn("TLS verification for Proxmox client is disabled, connections will be insecure")
 	}
 
@@ -95,7 +101,8 @@ func (ig *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings
 		return provider.ProviderInfo{}, err
 	}
 
-	if err := ig.markStaleInstancesForRemoval(ctx); err != nil {
+	err = ig.markStaleInstancesForRemoval(ctx)
+	if err != nil {
 		return provider.ProviderInfo{}, err
 	}
 
@@ -110,14 +117,15 @@ func (ig *InstanceGroup) Init(ctx context.Context, logger hclog.Logger, settings
 	ig.startSessionTicketRefresher()
 
 	return provider.ProviderInfo{
-		ID:      ig.Settings.Pool,
-		MaxSize: *ig.Settings.MaxInstances,
+		ID:      ig.Pool,
+		MaxSize: *ig.MaxInstances,
 	}, nil
 }
 
 // Shutdown implements provider.InstanceGroup.
 func (ig *InstanceGroup) Shutdown(_ context.Context) error {
 	ig.collectorShutdownTrigger <- struct{}{}
+
 	ig.sessionTicketRefresherShutdownTrigger <- struct{}{}
 
 	ig.collectorWaitGroup.Wait()
@@ -128,9 +136,9 @@ func (ig *InstanceGroup) Shutdown(_ context.Context) error {
 
 // Increase implements provider.InstanceGroup.
 func (ig *InstanceGroup) Increase(ctx context.Context, count int) (int, error) {
-	template, err := ig.getProxmoxVM(ctx, *ig.Settings.TemplateID)
+	template, err := ig.getProxmoxVM(ctx, *ig.TemplateID)
 	if err != nil {
-		return 0, fmt.Errorf("failed to find template with id='%d': %w", *ig.Settings.TemplateID, err)
+		return 0, fmt.Errorf("failed to find template with id='%d': %w", *ig.TemplateID, err)
 	}
 
 	var (
@@ -146,7 +154,7 @@ func (ig *InstanceGroup) Increase(ctx context.Context, count int) (int, error) {
 	ig.instanceCloningMu.Lock()
 	defer ig.instanceCloningMu.Unlock()
 
-	for n := 0; n < count; n++ {
+	for range count {
 		errorGroup.Go(func() error {
 			vmid, err := ig.deployInstance(ctx, template, cloneMu)
 			if err != nil {
@@ -155,14 +163,17 @@ func (ig *InstanceGroup) Increase(ctx context.Context, count int) (int, error) {
 
 			ig.log.Info("successfully deployed instance", "vmid", vmid)
 			succeededMu.Lock()
+
 			succeeded++
+
 			succeededMu.Unlock()
 
 			return err
 		})
 	}
 
-	if err := errorGroup.Wait(); err != nil {
+	err = errorGroup.Wait()
+	if err != nil {
 		return succeeded, fmt.Errorf("failed to create one or more instances: %w", err)
 	}
 
@@ -187,11 +198,11 @@ func (ig *InstanceGroup) Update(ctx context.Context, update func(instance string
 		var state provider.State
 
 		switch member.Name {
-		case ig.Settings.InstanceNameCreating:
+		case ig.InstanceNameCreating:
 			state = provider.StateCreating
-		case ig.Settings.InstanceNameRunning:
+		case ig.InstanceNameRunning:
 			state = provider.StateRunning
-		case ig.Settings.InstanceNameRemoving:
+		case ig.InstanceNameRemoving:
 			state = provider.StateDeleting
 		default:
 			continue // Unknown name, skipping...
@@ -201,30 +212,6 @@ func (ig *InstanceGroup) Update(ctx context.Context, update func(instance string
 	}
 
 	return nil
-}
-
-func (ig *InstanceGroup) getConnectInfoFromVM(ctx context.Context, instance string, vm *proxmox.VirtualMachine) (provider.ConnectInfo, error) {
-	for retry := 0; retry < networkCheckRetries; retry++ {
-		networkInterfaces, err := vm.AgentGetNetworkIFaces(ctx)
-		if err != nil {
-			return provider.ConnectInfo{}, fmt.Errorf("failed to retrieve instance vmid='%d' interfaces: %w", vm.VMID, err)
-		}
-
-		internalAddress, externalAddress, err := determineAddresses(networkInterfaces, ig.InstanceNetworkInterface, ig.InstanceNetworkProtocol)
-		if err != nil {
-			ig.log.Error("failed to get network interface", "retry", retry, "err", err)
-			time.Sleep(networkCheckTimeout)
-			continue
-		}
-
-		return provider.ConnectInfo{
-			ID:              instance,
-			InternalAddr:    internalAddress,
-			ExternalAddr:    externalAddress,
-			ConnectorConfig: ig.FleetingSettings.ConnectorConfig,
-		}, nil
-	}
-	return provider.ConnectInfo{}, fmt.Errorf("Timed out getting connection info")
 }
 
 // ConnectInfo implements provider.InstanceGroup.
@@ -257,8 +244,6 @@ func (ig *InstanceGroup) Decrease(ctx context.Context, instancesToRemove []strin
 	)
 
 	for _, member := range pool.Members {
-		member := member
-
 		if !ig.isProxmoxResourceAnInstance(member) {
 			continue
 		}
@@ -267,15 +252,17 @@ func (ig *InstanceGroup) Decrease(ctx context.Context, instancesToRemove []strin
 			continue
 		}
 
-		if member.Name == ig.Settings.InstanceNameCreating {
+		if member.Name == ig.InstanceNameCreating {
 			// It must be running to start the deletion
 			continue
 		}
 
-		if member.Name == ig.Settings.InstanceNameRemoving {
+		if member.Name == ig.InstanceNameRemoving {
 			// Already deleting...
 			succeededMu.Lock()
+
 			succeeded = append(succeeded, strconv.FormatUint(member.VMID, 10))
+
 			succeededMu.Unlock()
 
 			continue
@@ -284,12 +271,14 @@ func (ig *InstanceGroup) Decrease(ctx context.Context, instancesToRemove []strin
 		ig.log.Info("removing instance", "vmid", member.VMID)
 
 		errorGroup.Go(func() error {
-			if err := ig.markInstancesForRemoval(ctx, &member); err != nil {
+			err = ig.markInstancesForRemoval(ctx, &member)
+			if err != nil {
 				return err
 			}
 
 			succeededMu.Lock()
 			defer succeededMu.Unlock()
+
 			succeeded = append(succeeded, strconv.FormatUint(member.VMID, 10))
 
 			return nil
@@ -298,4 +287,30 @@ func (ig *InstanceGroup) Decrease(ctx context.Context, instancesToRemove []strin
 
 	//nolint:wrapcheck
 	return succeeded, errorGroup.Wait()
+}
+
+func (ig *InstanceGroup) getConnectInfoFromVM(ctx context.Context, instance string, vm *proxmox.VirtualMachine) (provider.ConnectInfo, error) {
+	for retry := range networkCheckRetries {
+		networkInterfaces, err := vm.AgentGetNetworkIFaces(ctx)
+		if err != nil {
+			return provider.ConnectInfo{}, fmt.Errorf("failed to retrieve instance vmid='%d' interfaces: %w", vm.VMID, err)
+		}
+
+		internalAddress, externalAddress, err := determineAddresses(networkInterfaces, ig.InstanceNetworkInterface, ig.InstanceNetworkProtocol)
+		if err != nil {
+			ig.log.Error("failed to get network interface", "retry", retry, "err", err)
+			time.Sleep(networkCheckTimeout)
+
+			continue
+		}
+
+		return provider.ConnectInfo{
+			ID:              instance,
+			InternalAddr:    internalAddress,
+			ExternalAddr:    externalAddress,
+			ConnectorConfig: ig.FleetingSettings.ConnectorConfig,
+		}, nil
+	}
+
+	return provider.ConnectInfo{}, fmt.Errorf("%w", ErrTimeoutGettingConnectionInfo)
 }
