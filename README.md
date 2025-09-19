@@ -4,7 +4,7 @@ This is a [fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugin for
 
 ## Installation
 
-See [Releases](https://github.com/LukasK32/fleeting-plugin-proxmox/releases) for available versions and installation instructions.
+See [Releases](https://github.com/dxas90/gitlab-fleeting-plugin-proxmox/releases) for available versions and installation instructions.
 
 ## Configuration
 

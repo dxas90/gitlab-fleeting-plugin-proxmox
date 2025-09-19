@@ -1,13 +1,13 @@
-module github.com/lukask32/fleeting-plugin-proxmox
+module github.com/dxas90/gitlab-fleeting-plugin-proxmox
 
-go 1.22.3
+go 1.25.1
 
 require (
 	github.com/hashicorp/go-hclog v1.6.3
-	github.com/luthermonson/go-proxmox v0.0.0-beta6
-	github.com/stretchr/testify v1.9.0
-	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20240531144118-752ebc78a2c0
-	golang.org/x/sync v0.10.0
+	github.com/luthermonson/go-proxmox v0.2.3
+	github.com/stretchr/testify v1.11.1
+	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20250910083154-db769f38ab21
+	golang.org/x/sync v0.17.0
 )
 
 require (
@@ -17,12 +17,13 @@ require (
 	github.com/bodgit/windows v1.0.1 // indirect
 	github.com/buger/goterm v1.0.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/diskfs/go-diskfs v1.4.0 // indirect
+	github.com/diskfs/go-diskfs v1.5.0 // indirect
+	github.com/djherbis/times v1.6.0 // indirect
 	github.com/fatih/color v1.17.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/gorilla/websocket v1.5.1 // indirect
+	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-plugin v1.6.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
@@ -33,24 +34,28 @@ require (
 	github.com/jcmturner/goidentity/v6 v6.0.1 // indirect
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
-	github.com/jinzhu/copier v0.4.0 // indirect
-	github.com/magefile/mage v1.15.0 // indirect
+	github.com/jinzhu/copier v0.3.4 // indirect
+	github.com/magefile/mage v1.14.0 // indirect
 	github.com/masterzen/simplexml v0.0.0-20190410153822-31eea3082786 // indirect
-	github.com/masterzen/winrm v0.0.0-20231227165926-e811dad5ac77 // indirect
+	github.com/masterzen/winrm v0.0.0-20240702205601-3fad6e106085 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/oklog/run v1.1.0 // indirect
+	github.com/oklog/ulid/v2 v2.0.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a // indirect
+	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af // indirect
 	github.com/tidwall/transform v0.0.0-20201103190739-32f242e2dbde // indirect
-	golang.org/x/crypto v0.31.0 // indirect
-	golang.org/x/mod v0.18.0 // indirect
-	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240604185151-ef581f913117 // indirect
-	google.golang.org/grpc v1.64.1 // indirect
-	google.golang.org/protobuf v1.34.1 // indirect
-	gopkg.in/djherbis/times.v1 v1.3.0 // indirect
+	gitlab.com/gitlab-org/go/reopen v1.0.0 // indirect
+	gitlab.com/gitlab-org/labkit v1.28.1 // indirect
+	golang.org/x/crypto v0.41.0 // indirect
+	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240528184218-531527333157 // indirect
+	google.golang.org/grpc v1.64.0 // indirect
+	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

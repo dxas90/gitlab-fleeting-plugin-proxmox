@@ -16,7 +16,11 @@ import (
 
 var _ provider.InstanceGroup = (*InstanceGroup)(nil)
 
-const triggerChannelCapacity = 100
+const (
+	triggerChannelCapacity = 100
+	networkCheckTimeout    = 5 * time.Second
+	networkCheckRetries    = 5
+)
 
 type InstanceGroup struct {
 	Settings         `json:",inline"`
@@ -44,6 +48,26 @@ type InstanceGroup struct {
 
 	// Wait group for session ticket refresher.
 	sessionTicketRefresherWaitGroup sync.WaitGroup `json:"-"`
+}
+
+// Heartbeat implements provider.InstanceGroup.
+// It checks if the VM is up and running.
+func (ig *InstanceGroup) Heartbeat(ctx context.Context, instance string) error {
+	VMID, err := strconv.Atoi(instance)
+	if err != nil {
+		return fmt.Errorf("failed to parse instance name '%s': %w", instance, err)
+	}
+
+	vm, err := ig.getProxmoxVM(ctx, VMID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve instance vmid='%d': %w", VMID, err)
+	}
+
+	if vm.Uptime == 0 {
+		return fmt.Errorf("instance vmid='%d' is not running", VMID)
+	}
+
+	return nil
 }
 
 // Init implements provider.InstanceGroup.
@@ -179,6 +203,30 @@ func (ig *InstanceGroup) Update(ctx context.Context, update func(instance string
 	return nil
 }
 
+func (ig *InstanceGroup) getConnectInfoFromVM(ctx context.Context, instance string, vm *proxmox.VirtualMachine) (provider.ConnectInfo, error) {
+	for retry := 0; retry < networkCheckRetries; retry++ {
+		networkInterfaces, err := vm.AgentGetNetworkIFaces(ctx)
+		if err != nil {
+			return provider.ConnectInfo{}, fmt.Errorf("failed to retrieve instance vmid='%d' interfaces: %w", vm.VMID, err)
+		}
+
+		internalAddress, externalAddress, err := determineAddresses(networkInterfaces, ig.InstanceNetworkInterface, ig.InstanceNetworkProtocol)
+		if err != nil {
+			ig.log.Error("failed to get network interface", "retry", retry, "err", err)
+			time.Sleep(networkCheckTimeout)
+			continue
+		}
+
+		return provider.ConnectInfo{
+			ID:              instance,
+			InternalAddr:    internalAddress,
+			ExternalAddr:    externalAddress,
+			ConnectorConfig: ig.FleetingSettings.ConnectorConfig,
+		}, nil
+	}
+	return provider.ConnectInfo{}, fmt.Errorf("Timed out getting connection info")
+}
+
 // ConnectInfo implements provider.InstanceGroup.
 func (ig *InstanceGroup) ConnectInfo(ctx context.Context, instance string) (provider.ConnectInfo, error) {
 	VMID, err := strconv.Atoi(instance)
@@ -191,22 +239,7 @@ func (ig *InstanceGroup) ConnectInfo(ctx context.Context, instance string) (prov
 		return provider.ConnectInfo{}, fmt.Errorf("failed to retrieve instance vmid='%d': %w", VMID, err)
 	}
 
-	networkInterfaces, err := vm.AgentGetNetworkIFaces(ctx)
-	if err != nil {
-		return provider.ConnectInfo{}, fmt.Errorf("failed to retrieve instance vmid='%d' interfaces: %w", VMID, err)
-	}
-
-	internalAddress, externalAddress, err := determineAddresses(networkInterfaces, ig.InstanceNetworkInterface, ig.InstanceNetworkProtocol)
-	if err != nil {
-		return provider.ConnectInfo{}, err
-	}
-
-	return provider.ConnectInfo{
-		ID:              instance,
-		InternalAddr:    internalAddress,
-		ExternalAddr:    externalAddress,
-		ConnectorConfig: ig.FleetingSettings.ConnectorConfig,
-	}, nil
+	return ig.getConnectInfoFromVM(ctx, instance, vm)
 }
 
 // Decrease implements provider.InstanceGroup.
