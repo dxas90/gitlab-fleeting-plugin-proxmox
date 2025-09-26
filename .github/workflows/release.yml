@@ -50,7 +50,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - run: ls -lah cmd/fleeting-plugin-proxmox
@@ -75,7 +75,7 @@ jobs:
       packages: write
       id-token: write
     steps:
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - run: go install gitlab.com/gitlab-org/fleeting/fleeting-artifact/cmd/fleeting-artifact@v0.0.0-20240501171108-612a68737bba
