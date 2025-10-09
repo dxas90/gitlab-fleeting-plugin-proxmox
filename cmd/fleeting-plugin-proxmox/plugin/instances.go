@@ -190,5 +190,5 @@ func (ig *InstanceGroup) markInstancesForRemoval(ctx context.Context, instances 
 }
 
 func (ig *InstanceGroup) isProxmoxResourceAnInstance(member proxmox.ClusterResource) bool {
-	return member.Type == "qemu" && member.VMID != uint64(*ig.TemplateID)
+	return member.VMID != uint64(*ig.TemplateID)
 }
