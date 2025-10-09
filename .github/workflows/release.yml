@@ -128,7 +128,7 @@ jobs:
 
             ASSET_NAME="fleeting-plugin-proxmox-${OS}-${ARCH}${EXT}"
             cp "./artifacts/${OS_ARCH}/plugin" "./release-assets/${ASSET_NAME}"
-            chmod +x "./release-assets/${ASSET_NAME}"
+            if [ "$OS" != "windows" ]; then chmod +x "./release-assets/${ASSET_NAME}"; fi
           done
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
