@@ -104,3 +104,36 @@ jobs:
           if [ "$VERSION" = "main" ]; then export VERSION="0.0.0-bleeding"; fi
           export REPOSITORY=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           fleeting-artifact release "${REPOSITORY}:${VERSION#v}"
+
+  github-release:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - run: mkdir -p release-assets
+      - uses: actions/download-artifact@v5
+        with:
+          path: artifacts
+      - name: Prepare release assets
+        run: |
+          for OS_ARCH in $(ls ./artifacts); do
+            OS=$(echo "${OS_ARCH}" | cut -d- -f1)
+            ARCH=$(echo "${OS_ARCH}" | cut -d- -f2)
+
+            EXT=""
+            if [ "$OS" = "windows" ]; then EXT=".exe"; fi
+
+            ASSET_NAME="fleeting-plugin-proxmox-${OS}-${ARCH}${EXT}"
+            cp "./artifacts/${OS_ARCH}/plugin" "./release-assets/${ASSET_NAME}"
+            chmod +x "./release-assets/${ASSET_NAME}"
+          done
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
