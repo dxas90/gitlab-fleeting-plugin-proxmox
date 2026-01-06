@@ -4,7 +4,7 @@ go 1.25.2
 
 require (
 	github.com/hashicorp/go-hclog v1.6.3
-	github.com/luthermonson/go-proxmox v0.3.1
+	github.com/luthermonson/go-proxmox v0.3.2
 	github.com/stretchr/testify v1.11.1
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260112165233-d8385ad2c46a
 	golang.org/x/sync v0.19.0

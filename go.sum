@@ -94,6 +94,8 @@ github.com/luthermonson/go-proxmox v0.2.3 h1:NAjUJ5Jd1ynIK6UHMGd/VLGgNZWpGXhfL+D
 github.com/luthermonson/go-proxmox v0.2.3/go.mod h1:oyFgg2WwTEIF0rP6ppjiixOHa5ebK1p8OaRiFhvICBQ=
 github.com/luthermonson/go-proxmox v0.3.1 h1:h64s4/zIEQ06TBo0phFKcckV441YpvUPgLfRAptYsjY=
 github.com/luthermonson/go-proxmox v0.3.1/go.mod h1:oyFgg2WwTEIF0rP6ppjiixOHa5ebK1p8OaRiFhvICBQ=
+github.com/luthermonson/go-proxmox v0.3.2 h1:/zUg6FCl9cAABx0xU3OIgtDtClY0gVXxOCsrceDNylc=
+github.com/luthermonson/go-proxmox v0.3.2/go.mod h1:oyFgg2WwTEIF0rP6ppjiixOHa5ebK1p8OaRiFhvICBQ=
 github.com/magefile/mage v1.14.0 h1:6QDX3g6z1YvJ4olPhT1wksUcSa/V0a1B+pJb73fBjyo=
 github.com/magefile/mage v1.14.0/go.mod h1:z5UZb/iS3GoOSn0JgWuiw7dxlurVYTu+/jHXqQg881A=
 github.com/masterzen/simplexml v0.0.0-20190410153822-31eea3082786 h1:2ZKn+w/BJeL43sCxI2jhPLRv73oVVOjEKZjKkflyqxg=
