@@ -6,7 +6,7 @@ require (
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/luthermonson/go-proxmox v0.3.1
 	github.com/stretchr/testify v1.11.1
-	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20251222133154-8030bb4751d8
+	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260112165233-d8385ad2c46a
 	golang.org/x/sync v0.19.0
 )
 
@@ -50,11 +50,11 @@ require (
 	github.com/tidwall/transform v0.0.0-20201103190739-32f242e2dbde // indirect
 	gitlab.com/gitlab-org/go/reopen v1.0.0 // indirect
 	gitlab.com/gitlab-org/labkit v1.34.0 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
-	golang.org/x/mod v0.31.0 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/mod v0.32.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251213004720-97cd9d5aeac2 // indirect
 	google.golang.org/grpc v1.77.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
